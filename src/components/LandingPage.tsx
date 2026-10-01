@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowRight, Image as ImageIcon, Sparkles, ScanEye, Zap, GripVertical } from "lucide-react";
+import { ArrowRight, Image as ImageIcon, Sparkles, ScanEye, Zap, GripVertical, BrainCircuit, Cpu, Layers } from "lucide-react";
 
 interface LandingPageProps {
   onStart: () => void;
@@ -210,6 +210,59 @@ export function LandingPage({ onStart }: LandingPageProps) {
             <p className="text-gray-500 leading-relaxed text-sm">
               Your sensitive images never leave your browser. All analysis, blurring, thresholding, and comparison happens locally on your machine for ultimate security and speed.
             </p>
+          </div>
+        </div>
+
+        {/* Future Vision / ML Scope */}
+        <div className="opacity-0 animate-fade-in-up w-full max-w-6xl mt-32 mb-10 text-left" style={{ animationDelay: "0.7s" }}>
+          <div className="flex flex-col items-center text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-4">
+              The Future of <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600">Visual Intelligence</span>
+            </h2>
+            <p className="text-gray-500 max-w-2xl text-lg">
+              While our current MVP uses deterministic computer vision, our roadmap integrates cutting-edge Machine Learning to bring true semantic understanding to image comparison.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Semantic Understanding */}
+            <div className="bg-gray-900 rounded-3xl p-8 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-6 backdrop-blur-md border border-white/10">
+                <BrainCircuit size={24} className="text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Multimodal Semantic LLMs</h3>
+              <p className="text-gray-400 text-sm leading-relaxed mb-4">
+                Integration with Vision models (like GPT-4o or Gemini 1.5 Pro) to move beyond "Pixel Changed" to "The wooden chair was removed and a coffee cup was added on the desk."
+              </p>
+              <div className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Coming Soon</div>
+            </div>
+
+            {/* SAM */}
+            <div className="bg-gray-900 rounded-3xl p-8 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-teal-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-6 backdrop-blur-md border border-white/10">
+                <Layers size={24} className="text-emerald-400" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Segment Anything (SAM)</h3>
+              <p className="text-gray-400 text-sm leading-relaxed mb-4">
+                Upgrading from rectangular bounding boxes to pixel-perfect polygon segmentation. The AI will isolate the exact contours of changed objects automatically.
+              </p>
+              <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">In Development</div>
+            </div>
+
+            {/* On-Device ML */}
+            <div className="bg-gray-900 rounded-3xl p-8 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-orange-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-6 backdrop-blur-md border border-white/10">
+                <Cpu size={24} className="text-amber-400" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Local WebGPU Inference</h3>
+              <p className="text-gray-400 text-sm leading-relaxed mb-4">
+                Running ONNX Web Runtime directly in your browser. Perform complex neural network inference (object detection & classification) locally without sending images to a server.
+              </p>
+              <div className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Future Tech Stack</div>
+            </div>
           </div>
         </div>
       </main>
