@@ -1,32 +1,123 @@
-# React + TypeScript + Vite
+# WHAT CHANGED?
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Don't compare pictures. Understand what changed.
 
-Currently, two official plugins are available:
+## Product Vision
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+A focused web application that compares two real-world images (BEFORE and AFTER) and identifies **meaningful real-world changes**, rather than simply showing pixel differences.
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Image Upload**: Drag-and-drop or browse to upload BEFORE and AFTER images
+- **Image Comparison**: Multiple viewing modes:
+  - Side-by-side comparison
+  - Interactive slider (drag to compare)
+- **Change Detection**: Identifies and categorizes meaningful changes
+  - Added
+  - Removed
+  - Moved
+  - Damaged
+  - Modified
+  - Uncertain
+- **Evidence View**: Click any detected change to see:
+  - Before/after crops of the specific region
+  - Detailed observation
+  - Confidence level
+- **Responsive Design**: Works seamlessly on desktop and mobile
 
-## Expanding the Oxlint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+- React 18 + TypeScript
+- Vite (build tool)
+- Tailwind CSS (styling)
+- Lucide Icons (icons)
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm
+
+### Installation
+
+```bash
+npm install
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+### Development
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+The app will open at `http://localhost:5173`
+
+### Production Build
+
+```bash
+npm run build
+```
+
+Output will be in the `dist/` directory.
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── upload/        # Image upload and preview
+│   ├── comparison/     # Comparison viewers (side-by-side, slider)
+│   └── analysis/       # Analysis UI (progress, change cards, evidence)
+├── services/          # Image analysis service
+├── types/             # TypeScript type definitions
+├── utils/             # Utility functions
+└── App.tsx            # Main application component
+```
+
+## How It Works
+
+1. **Upload**: User uploads BEFORE and AFTER images
+2. **Analyze**: Click "COMPARE IMAGES" to analyze
+3. **Review**: View detected changes with:
+   - Summary of total changes
+   - Interactive change cards
+   - Comparison slider/side-by-side view
+4. **Inspect**: Click "VIEW EVIDENCE" on any change to see details
+5. **Reset**: Start a new comparison
+
+## Analysis Service
+
+The analysis service (`src/services/imageAnalysis.ts`) provides a clean abstraction for image comparison. Currently uses demo data with 3 sample changes. To integrate with a real AI provider:
+
+1. Update `analyzeImages()` function to call your API
+2. Keep API keys server-side
+3. Ensure image privacy by not storing them permanently
+
+## Supported Image Formats
+
+- JPG/JPEG
+- PNG
+- WEBP
+
+Maximum file size: 10MB
+
+## Privacy
+
+- Images are not permanently stored
+- Processed in-memory and cleared after analysis
+- No image data is logged
+- Clear/Reset functionality available
+
+## Demo Mode
+
+The current implementation includes demo analysis results to demonstrate the core experience. This is placeholder data that works immediately.
+
+## Future Enhancements
+
+- Real AI-powered image analysis integration
+- Additional comparison visualization modes
+- Change history and export
+- Batch processing
+- API integration for external use
