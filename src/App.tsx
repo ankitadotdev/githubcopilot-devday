@@ -7,12 +7,13 @@ import { EvidenceView } from "./components/analysis/EvidenceView";
 import { SideBySide } from "./components/comparison/SideBySide";
 import { ComparisonSlider } from "./components/comparison/ComparisonSlider";
 import { DifferenceView } from "./components/comparison/DifferenceView";
+import { LandingPage } from "./components/LandingPage";
 import { analyzeImages } from "./services/imageAnalysis";
 import type { AnalysisStage } from "./services/imageAnalysis";
 import { createObjectURL, revokeObjectURL } from "./utils/image";
 import type { AnalyzeResponse } from "./types/analysis";
 
-type ViewMode = "upload" | "comparison";
+type ViewMode = "landing" | "upload" | "comparison";
 type ComparisonMode = "side-by-side" | "slider" | "difference";
 
 function App() {
@@ -21,7 +22,7 @@ function App() {
   const [beforePreview, setBeforePreview] = useState<string | null>(null);
   const [afterPreview, setAfterPreview] = useState<string | null>(null);
 
-  const [viewMode, setViewMode] = useState<ViewMode>("upload");
+  const [viewMode, setViewMode] = useState<ViewMode>("landing");
   const [comparisonMode, setComparisonMode] =
     useState<ComparisonMode>("slider");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -105,6 +106,10 @@ function App() {
       index: idx,
       onClick: () => setSelectedChangeId(change.id),
     })) || [];
+
+  if (viewMode === "landing") {
+    return <LandingPage onStart={() => setViewMode("upload")} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#fafafa]">
