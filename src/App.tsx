@@ -211,6 +211,18 @@ function App() {
                     <ComparisonSlider
                       beforeImage={beforePreview}
                       afterImage={afterPreview}
+                      highlightRegions={
+                        analysisResult?.changes.map((change) => ({
+                          id: change.id,
+                          region: change.region || {
+                            x: 0,
+                            y: 0,
+                            width: 1,
+                            height: 1,
+                          },
+                          type: change.type,
+                        })) || []
+                      }
                     />
                   )}
                 </div>
