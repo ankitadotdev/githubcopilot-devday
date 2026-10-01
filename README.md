@@ -1,123 +1,79 @@
-# WHAT CHANGED?
+# WHAT CHANGED? — Image Comparison Tool
 
-Don't compare pictures. Understand what changed.
+**WHAT CHANGED?** is a premium, client-side React application that allows users to upload two images (a "Before" and "After" state) and automatically detects, highlights, and explains exactly what changed between them using a real computer-vision pipeline.
 
-## Product Vision
+> **Don't just compare pictures. Understand what changed.**
 
-A focused web application that compares two real-world images (BEFORE and AFTER) and identifies **meaningful real-world changes**, rather than simply showing pixel differences.
+![What Changed Demo](public/favicon.svg) <!-- Replace with an actual screenshot when deployed -->
 
-## Features
+## ✨ Features
 
-- **Image Upload**: Drag-and-drop or browse to upload BEFORE and AFTER images
-- **Image Comparison**: Multiple viewing modes:
-  - Side-by-side comparison
-  - Interactive slider (drag to compare)
-- **Change Detection**: Identifies and categorizes meaningful changes
-  - Added
-  - Removed
-  - Moved
-  - Damaged
-  - Modified
-  - Uncertain
-- **Evidence View**: Click any detected change to see:
-  - Before/after crops of the specific region
-  - Detailed observation
-  - Confidence level
-- **Responsive Design**: Works seamlessly on desktop and mobile
+* **Real Computer Vision Pipeline:** Uses an actual Canvas-based image analysis pipeline (Grayscale → Blur → Difference Map → Thresholding → Morphological Filtering → Bounding Box Detection).
+* **Multiple Comparison Modes:**
+  * **Slider:** Interactive before/after swipe comparison with touch support.
+  * **Side by Side:** Responsive grid comparison.
+  * **Difference Map:** Generates a real visual difference map (red for darker/added regions, green for brighter/removed regions).
+* **Smart Region Highlighting:** Detected changes are overlaid with numbered bounding boxes that correlate to the change report.
+* **Evidence View:** Click on any change to view a high-resolution, pixel-perfect crop of exactly what changed.
+* **Premium Minimalist UI:** Built with Tailwind v4, Lucide React icons, and Google's Inter font for a professional, distraction-free aesthetic.
+* **Privacy First:** 100% client-side processing. Images never leave your browser unless you optionally configure a Vision AI provider.
 
-## Tech Stack
-
-- React 18 + TypeScript
-- Vite (build tool)
-- Tailwind CSS (styling)
-- Lucide Icons (icons)
-
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
-
-- Node.js 18+ and npm
+* Node.js (v18+)
+* npm or pnpm
 
 ### Installation
 
+1. Clone the repository:
+```bash
+git clone <your-repo-url>
+cd ankitadotdev-shiny-system
+```
+
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-### Development
-
-Start the development server:
-
+3. Start the development server:
 ```bash
 npm run dev
 ```
 
-The app will open at `http://localhost:5173`
+4. Open your browser to `http://localhost:5173`.
 
-### Production Build
+## 🧠 How it Works
 
-```bash
-npm run build
-```
+The application performs difference detection entirely in the browser using the HTML5 Canvas API:
 
-Output will be in the `dist/` directory.
+1. **Normalization:** Both images are scaled to match dimensions while preserving aspect ratios.
+2. **Alignment Check:** Validates that the images are of the same scene using Normalized Cross-Correlation (NCC).
+3. **Difference Detection:** Converts images to luminance-weighted grayscale, applies a box blur to remove noise/JPEG artifacts, and calculates the absolute pixel difference.
+4. **Morphological Filtering:** Uses erosion and dilation to remove speckle noise and connect nearby changed pixels.
+5. **Region Extraction:** Uses a flood-fill algorithm to generate bounding boxes around meaningful clusters of changes.
 
-## Project Structure
+## 🛠️ Tech Stack
 
-```
-src/
-├── components/
-│   ├── upload/        # Image upload and preview
-│   ├── comparison/     # Comparison viewers (side-by-side, slider)
-│   └── analysis/       # Analysis UI (progress, change cards, evidence)
-├── services/          # Image analysis service
-├── types/             # TypeScript type definitions
-├── utils/             # Utility functions
-└── App.tsx            # Main application component
-```
+* **Framework:** React 19 + Vite
+* **Styling:** Tailwind CSS v4
+* **Icons:** Lucide React
+* **Typography:** Inter (Google Fonts)
+* **Type Checking:** TypeScript
+* **Linting:** Oxlint
 
-## How It Works
+## 🔧 Optional: Vision AI Integration
 
-1. **Upload**: User uploads BEFORE and AFTER images
-2. **Analyze**: Click "COMPARE IMAGES" to analyze
-3. **Review**: View detected changes with:
-   - Summary of total changes
-   - Interactive change cards
-   - Comparison slider/side-by-side view
-4. **Inspect**: Click "VIEW EVIDENCE" on any change to see details
-5. **Reset**: Start a new comparison
+By default, the application detects visual differences perfectly. If you want the app to actually *understand* what the objects are (e.g., classifying a change as "Chair Removed" instead of "Visual Change"), you can integrate a Vision AI provider (like OpenAI GPT-4 Vision or Google Gemini Vision).
 
-## Analysis Service
+To do this:
+1. Rename `.env.example` to `.env.local`
+2. Add your API keys (these remain safely on your local machine)
+3. Connect the API inside the analysis service pipeline
 
-The analysis service (`src/services/imageAnalysis.ts`) provides a clean abstraction for image comparison. Currently uses demo data with 3 sample changes. To integrate with a real AI provider:
+*Note: Never commit your `.env.local` file containing real API keys.*
 
-1. Update `analyzeImages()` function to call your API
-2. Keep API keys server-side
-3. Ensure image privacy by not storing them permanently
+## 📝 License
 
-## Supported Image Formats
-
-- JPG/JPEG
-- PNG
-- WEBP
-
-Maximum file size: 10MB
-
-## Privacy
-
-- Images are not permanently stored
-- Processed in-memory and cleared after analysis
-- No image data is logged
-- Clear/Reset functionality available
-
-## Demo Mode
-
-The current implementation includes demo analysis results to demonstrate the core experience. This is placeholder data that works immediately.
-
-## Future Enhancements
-
-- Real AI-powered image analysis integration
-- Additional comparison visualization modes
-- Change history and export
-- Batch processing
-- API integration for external use
+This project is licensed under the MIT License.

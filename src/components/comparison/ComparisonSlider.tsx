@@ -1,159 +1,193 @@
 import React from "react";
+import { GripVertical } from "lucide-react";
+import type { ChangeType } from "../../types/analysis";
+
+interface HighlightRegion {
+  id: string;
+  region: { x: number; y: number; width: number; height: number };
+  type: ChangeType | string;
+  index: number;
+  onClick?: () => void;
+}
 
 interface ComparisonSliderProps {
   beforeImage: string;
   afterImage: string;
-  beforeLabel?: string;
-  afterLabel?: string;
-  highlightRegions?: Array<{
-    id: string;
-    region: { x: number; y: number; width: number; height: number };
-    type: string;
-  }>;
+  highlightRegions?: HighlightRegion[];
+  selectedRegionId?: string | null;
 }
+
+const regionBorderColor: Record<string, string> = {
+  removed: "#dc2626",
+  added: "#16a34a",
+  moved: "#d97706",
+  modified: "#2563eb",
+  uncertain: "#6b7280",
+  damaged: "#eab308",
+};
 
 export function ComparisonSlider({
   beforeImage,
   afterImage,
-  beforeLabel = "BEFORE",
-  afterLabel = "AFTER",
   highlightRegions = [],
+  selectedRegionId,
 }: ComparisonSliderProps) {
   const [sliderPosition, setSliderPosition] = React.useState(50);
   const [isDragging, setIsDragging] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = React.useState(0);
 
-  const handleMouseDown = () => setIsDragging(true);
+  // Track container width for proper before-image sizing
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-  const updatePosition = (clientX: number) => {
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(el);
+    setContainerWidth(el.offsetWidth);
+
+    return () => observer.disconnect();
+  }, []);
+
+  const updatePosition = React.useCallback((clientX: number) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const newPosition = ((clientX - rect.left) / rect.width) * 100;
     setSliderPosition(Math.max(0, Math.min(100, newPosition)));
-  };
+  }, []);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    updatePosition(e.clientX);
-  };
+  const handleMouseDown = React.useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+      updatePosition(e.clientX);
+    },
+    [updatePosition]
+  );
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    updatePosition(touch.clientX);
-  };
+  const handleTouchStart = React.useCallback(
+    (e: React.TouchEvent) => {
+      setIsDragging(true);
+      updatePosition(e.touches[0].clientX);
+    },
+    [updatePosition]
+  );
 
   React.useEffect(() => {
     if (!isDragging) return;
 
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      updatePosition(e.clientX);
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      const clientX =
+        "touches" in e ? e.touches[0].clientX : e.clientX;
+      updatePosition(clientX);
     };
 
-    const handleGlobalMouseUp = () => {
-      setIsDragging(false);
-    };
+    const handleEnd = () => setIsDragging(false);
 
-    window.addEventListener("mousemove", handleGlobalMouseMove);
-    window.addEventListener("mouseup", handleGlobalMouseUp);
+    window.addEventListener("mousemove", handleMove, { passive: false });
+    window.addEventListener("mouseup", handleEnd);
+    window.addEventListener("touchmove", handleMove, { passive: false });
+    window.addEventListener("touchend", handleEnd);
 
     return () => {
-      window.removeEventListener("mousemove", handleGlobalMouseMove);
-      window.removeEventListener("mouseup", handleGlobalMouseUp);
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleEnd);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleEnd);
     };
-  }, [isDragging]);
+  }, [isDragging, updatePosition]);
+
+  const renderRegions = (keyPrefix: string) =>
+    highlightRegions.map((r) => {
+      const color = regionBorderColor[r.type] || regionBorderColor.uncertain;
+      const selected = selectedRegionId === r.id;
+      return (
+        <div
+          key={`${keyPrefix}-${r.id}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            r.onClick?.();
+          }}
+          className="region-marker"
+          style={{
+            left: `${r.region.x * 100}%`,
+            top: `${r.region.y * 100}%`,
+            width: `${r.region.width * 100}%`,
+            height: `${r.region.height * 100}%`,
+            borderColor: color,
+            backgroundColor: selected ? `${color}18` : `${color}08`,
+            boxShadow: selected ? `0 0 0 3px ${color}30` : "none",
+          }}
+        >
+          <span
+            className="region-number"
+            style={{ backgroundColor: color }}
+          >
+            {r.index + 1}
+          </span>
+        </div>
+      );
+    });
 
   return (
     <div
       ref={containerRef}
-      onMouseMove={handleMouseMove}
-      onTouchMove={handleTouchMove}
-      className={`relative w-full overflow-hidden rounded-lg bg-gray-100 select-none ${
-        isDragging ? "cursor-col-resize" : "cursor-col-resize hover:bg-gray-200"
-      }`}
+      className="comparison-slider relative w-full overflow-hidden rounded-lg bg-gray-100"
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
     >
-      <img src={afterImage} alt={afterLabel} className="w-full h-auto" />
+      {/* After image (full width, background layer) */}
+      <img
+        src={afterImage}
+        alt="After"
+        className="w-full h-auto block"
+        draggable={false}
+      />
+      {renderRegions("after")}
 
-      {/* Highlight regions on after image */}
-      {highlightRegions.map((region) => (
-        <div
-          key={`after-${region.id}`}
-          style={{
-            position: "absolute",
-            left: `${region.region.x * 100}%`,
-            top: `${region.region.y * 100}%`,
-            width: `${region.region.width * 100}%`,
-            height: `${region.region.height * 100}%`,
-          }}
-          className={`border-2 ${
-            region.type === "removed"
-              ? "border-red-500"
-              : region.type === "moved"
-                ? "border-orange-500"
-                : "border-yellow-500"
-          }`}
-        />
-      ))}
-
-      {/* Before image clipped by slider */}
+      {/* Before image (clipped by slider position) */}
       <div
-        style={{ width: `${sliderPosition}%` }}
         className="absolute inset-0 overflow-hidden"
+        style={{ width: `${sliderPosition}%` }}
       >
-        <img src={beforeImage} alt={beforeLabel} className="w-screen h-auto" />
-
-        {/* Highlight regions on before image */}
-        {highlightRegions.map((region) => (
-          <div
-            key={`before-${region.id}`}
-            style={{
-              position: "absolute",
-              left: `${region.region.x * 100}%`,
-              top: `${region.region.y * 100}%`,
-              width: `${region.region.width * 100}%`,
-              height: `${region.region.height * 100}%`,
-            }}
-            className={`border-2 ${
-              region.type === "removed"
-                ? "border-red-500"
-                : region.type === "moved"
-                  ? "border-orange-500"
-                  : "border-yellow-500"
-            }`}
-          />
-        ))}
+        {/* The before image must match the full container width so it
+            aligns pixel-for-pixel with the after image underneath */}
+        <img
+          src={beforeImage}
+          alt="Before"
+          className="h-full block"
+          style={{
+            width: containerWidth > 0 ? `${containerWidth}px` : "100vw",
+            maxWidth: "none",
+            objectFit: "cover",
+            objectPosition: "left top",
+          }}
+          draggable={false}
+        />
+        {renderRegions("before")}
       </div>
 
-      {/* Slider line and handle */}
+      {/* Slider handle */}
       <div
+        className="slider-handle"
         style={{ left: `${sliderPosition}%` }}
-        className="absolute inset-y-0 w-1 bg-white shadow-lg transform -translate-x-1/2 transition-opacity"
       >
-        <div
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-full shadow-md p-2 hover:shadow-lg transition"
-          onMouseDown={handleMouseDown}
-          role="slider"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(sliderPosition)}
-          tabIndex={0}
-        >
-          <svg
-            className="w-5 h-5 text-gray-700"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path d="M8.5 3a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm6 0a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM9 13a1 1 0 11-2 0 1 1 0 012 0zm6 0a1 1 0 11-2 0 1 1 0 012 0zM9 17a1 1 0 11-2 0 1 1 0 012 0zm6 0a1 1 0 11-2 0 1 1 0 012 0z" />
-          </svg>
+        <div className="slider-grip">
+          <GripVertical size={18} className="text-gray-500" />
         </div>
       </div>
 
       {/* Labels */}
-      <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-white px-3 py-1 rounded text-xs font-medium pointer-events-none">
-        {beforeLabel}
+      <div className="absolute top-3 left-3 bg-black/60 text-white px-2.5 py-1 rounded text-xs font-semibold pointer-events-none z-20">
+        BEFORE
       </div>
-
-      <div className="absolute top-4 right-4 bg-black bg-opacity-60 text-white px-3 py-1 rounded text-xs font-medium pointer-events-none">
-        {afterLabel}
+      <div className="absolute top-3 right-3 bg-black/60 text-white px-2.5 py-1 rounded text-xs font-semibold pointer-events-none z-20">
+        AFTER
       </div>
     </div>
   );

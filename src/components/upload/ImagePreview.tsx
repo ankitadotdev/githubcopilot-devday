@@ -1,6 +1,6 @@
 import React from "react";
-import { Upload, X } from "lucide-react";
-import { validateImageFile, revokeObjectURL } from "../../utils/image";
+import { Upload, X, RefreshCw } from "lucide-react";
+import { validateImageFile } from "../../utils/image";
 
 interface ImagePreviewProps {
   label: string;
@@ -11,14 +11,38 @@ interface ImagePreviewProps {
   disabled?: boolean;
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function ImagePreview({
   label,
+  file,
   preview,
   onFileChange,
   onDrop,
   disabled = false,
 }: ImagePreviewProps) {
   const [dragActive, setDragActive] = React.useState(false);
+  const [dimensions, setDimensions] = React.useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const inputId = `${label}-input`;
+
+  // Load image dimensions asynchronously when preview URL changes
+  React.useEffect(() => {
+    if (!preview) return;
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (!cancelled) setDimensions({ width: img.width, height: img.height });
+    };
+    img.src = preview;
+    return () => { cancelled = true; };
+  }, [preview]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -56,18 +80,23 @@ export function ImagePreview({
       }
       onFileChange(files[0]);
     }
+    // Reset input so the same file can be re-selected
+    e.currentTarget.value = "";
   };
 
   const handleRemove = () => {
-    if (preview) {
-      revokeObjectURL(preview);
-    }
     onFileChange(null);
   };
 
+  const handleClickDropZone = () => {
+    if (!disabled) {
+      document.getElementById(inputId)?.click();
+    }
+  };
+
   return (
-    <div className="flex-1">
-      <label className="block text-sm font-semibold text-gray-900 mb-3">
+    <div className="flex-1 min-w-0">
+      <label className="block text-xs font-bold text-gray-500 mb-3 uppercase tracking-widest">
         {label}
       </label>
 
@@ -78,12 +107,14 @@ export function ImagePreview({
             alt={label}
             className="w-full h-auto max-h-96 object-contain bg-gray-50"
           />
-          <div className="absolute top-2 right-2 gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex">
+          {/* Overlay actions on hover */}
+          <div className="absolute top-3 right-3 gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex">
             <button
-              onClick={() => document.getElementById(`${label}-input`)?.click()}
+              onClick={() => document.getElementById(inputId)?.click()}
               disabled={disabled}
-              className="button-sm"
+              className="button-sm flex items-center gap-1"
             >
+              <RefreshCw size={12} />
               Replace
             </button>
             <button
@@ -92,9 +123,25 @@ export function ImagePreview({
               className="button-danger"
               aria-label={`Remove ${label}`}
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           </div>
+
+          {/* File info bar */}
+          {file && (
+            <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-xs text-gray-600 truncate font-medium">
+                {file.name}
+              </span>
+              <span className="text-xs text-gray-400 shrink-0 ml-3">
+                {dimensions
+                  ? `${dimensions.width}×${dimensions.height}`
+                  : ""}
+                {" · "}
+                {formatFileSize(file.size)}
+              </span>
+            </div>
+          )}
         </div>
       ) : (
         <div
@@ -102,29 +149,33 @@ export function ImagePreview({
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
-          className={`image-card p-8 md:p-12 text-center transition cursor-pointer ${
-            dragActive
-              ? "upload-area-border drag-active"
-              : "upload-area-border"
+          onClick={handleClickDropZone}
+          className={`upload-area-border p-10 md:p-14 text-center transition cursor-pointer ${
+            dragActive ? "drag-active" : ""
           } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
         >
-          <Upload className="mx-auto mb-3 text-gray-400" size={32} strokeWidth={1.5} />
-          <p className="text-gray-900 font-medium mb-1">
-            Drag image here or click to browse
-          </p>
-          <p className="text-xs text-gray-500">JPG, PNG, WEBP up to 10MB</p>
-
-          <input
-            id={`${label}-input`}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleFileInput}
-            disabled={disabled}
-            className="hidden"
-            aria-label={`Upload ${label} image`}
+          <Upload
+            className="mx-auto mb-4 text-gray-300"
+            size={36}
+            strokeWidth={1.5}
           />
+          <p className="text-gray-700 font-medium text-sm mb-1">
+            Drop image here or click to browse
+          </p>
+          <p className="text-xs text-gray-400">JPG, PNG, WEBP · up to 10 MB</p>
         </div>
       )}
+
+      {/* Hidden file input */}
+      <input
+        id={inputId}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={handleFileInput}
+        disabled={disabled}
+        className="hidden"
+        aria-label={`Upload ${label} image`}
+      />
     </div>
   );
 }

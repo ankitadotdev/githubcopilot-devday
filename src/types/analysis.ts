@@ -1,12 +1,18 @@
-export type ChangeType = "added" | "removed" | "moved" | "damaged" | "modified" | "uncertain";
+export type ChangeType =
+  | "added"
+  | "removed"
+  | "moved"
+  | "damaged"
+  | "modified"
+  | "uncertain";
 
 export type ConfidenceLevel = "high" | "medium" | "low";
 
 export interface Region {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  x: number;      // 0..1 normalized left
+  y: number;      // 0..1 normalized top
+  width: number;  // 0..1 normalized width
+  height: number; // 0..1 normalized height
 }
 
 export interface Change {
@@ -14,11 +20,9 @@ export interface Change {
   type: ChangeType;
   title: string;
   description: string;
-  confidence: number;
+  confidence: number;       // 0..1
   confidenceLevel: ConfidenceLevel;
   region?: Region;
-  beforeEvidence?: string;
-  afterEvidence?: string;
 }
 
 export interface AnalyzeResponse {

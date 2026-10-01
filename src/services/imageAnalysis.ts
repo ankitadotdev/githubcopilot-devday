@@ -1,4 +1,4 @@
-import type { AnalyzeResponse, Change } from "../types/analysis";
+import type { AnalyzeResponse, Change, Region } from "../types/analysis";
 
 export interface ChangeRegion {
   x: number;
@@ -13,135 +13,203 @@ export interface ChangeRegion {
 const ANALYSIS_CONFIG = {
   maxAnalysisWidth: 800,
   maxAnalysisHeight: 600,
-  differenceThreshold: 30,
-  minRegionArea: 400,
-  minRegionIntensity: 0.1,
+  differenceThreshold: 32,
+  minRegionArea: 500,
+  minRegionIntensity: 0.12,
+  maxRegions: 10,
+  morphRadius: 3,
+  // Gaussian blur radius for noise reduction
+  blurRadius: 2,
 };
 
 /**
- * Convert File to ImageData for analysis
+ * Convert a File to ImageData at a normalized analysis size.
+ * Returns both the ImageData and the original image dimensions.
  */
-async function fileToImageData(file: File): Promise<ImageData> {
+async function fileToImageData(
+  file: File,
+  targetWidth: number,
+  targetHeight: number
+): Promise<{ data: ImageData; originalWidth: number; originalHeight: number }> {
   return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      const originalWidth = img.width;
+      const originalHeight = img.height;
+
       const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         reject(new Error("Failed to get canvas context"));
         return;
       }
-      ctx.drawImage(img, 0, 0);
-      resolve(ctx.getImageData(0, 0, canvas.width, canvas.height));
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      resolve({
+        data: ctx.getImageData(0, 0, targetWidth, targetHeight),
+        originalWidth,
+        originalHeight,
+      });
     };
-    img.onerror = () => reject(new Error("Failed to load image"));
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load image"));
+    };
+    img.src = url;
   });
 }
 
 /**
- * Resize image data to a target size for analysis
+ * Calculate the analysis dimensions that fit within config limits
+ * while preserving aspect ratio. Both images will be resized to
+ * the same dimensions.
  */
-function resizeImageData(
-  imageData: ImageData,
-  targetWidth: number,
-  targetHeight: number
-): ImageData {
-  const canvas = document.createElement("canvas");
-  canvas.width = imageData.width;
-  canvas.height = imageData.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Failed to get canvas context");
-
-  ctx.putImageData(imageData, 0, 0);
-
-  const resizeCanvas = document.createElement("canvas");
-  resizeCanvas.width = targetWidth;
-  resizeCanvas.height = targetHeight;
-  const resizeCtx = resizeCanvas.getContext("2d");
-  if (!resizeCtx) throw new Error("Failed to get resize canvas context");
-
-  resizeCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
-  return resizeCtx.getImageData(0, 0, targetWidth, targetHeight);
-}
-
-/**
- * Simple image alignment by checking color correlation
- */
-function estimateAlignment(
-  before: ImageData,
-  after: ImageData
-): { dx: number; dy: number; score: number } {
-  // For MVP, we'll do basic alignment by checking global color shift
-  // More sophisticated alignment would use feature detection
-
-  const beforeAvg = getAverageColor(before);
-  const afterAvg = getAverageColor(after);
-
-  // Calculate color distance
-  const score =
-    1 -
-    Math.sqrt(
-      Math.pow(beforeAvg.r - afterAvg.r, 2) +
-        Math.pow(beforeAvg.g - afterAvg.g, 2) +
-        Math.pow(beforeAvg.b - afterAvg.b, 2)
-    ) / 441; // 441 = sqrt(255^2 * 3)
-
-  return { dx: 0, dy: 0, score };
-}
-
-/**
- * Get average color of image
- */
-function getAverageColor(
-  imageData: ImageData
-): { r: number; g: number; b: number } {
-  const data = imageData.data;
-  let r = 0,
-    g = 0,
-    b = 0;
-
-  for (let i = 0; i < data.length; i += 4) {
-    r += data[i];
-    g += data[i + 1];
-    b += data[i + 2];
-  }
-
-  const pixelCount = data.length / 4;
+function calcAnalysisSize(
+  w1: number,
+  h1: number,
+  w2: number,
+  h2: number
+): { width: number; height: number } {
+  // Use the average aspect ratio
+  const avgW = (w1 + w2) / 2;
+  const avgH = (h1 + h2) / 2;
+  const scale = Math.min(
+    1,
+    ANALYSIS_CONFIG.maxAnalysisWidth / avgW,
+    ANALYSIS_CONFIG.maxAnalysisHeight / avgH
+  );
   return {
-    r: Math.round(r / pixelCount),
-    g: Math.round(g / pixelCount),
-    b: Math.round(b / pixelCount),
+    width: Math.round(avgW * scale),
+    height: Math.round(avgH * scale),
   };
 }
 
 /**
- * Calculate per-pixel difference between two images
+ * Convert RGB to grayscale using luminance weights
  */
-function calculateDifference(
-  before: ImageData,
-  after: ImageData
+function toGrayscale(imageData: ImageData): Uint8ClampedArray {
+  const { data, width, height } = imageData;
+  const gray = new Uint8ClampedArray(width * height);
+  for (let i = 0; i < width * height; i++) {
+    const idx = i * 4;
+    // Rec. 601 luma
+    gray[i] = Math.round(
+      0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]
+    );
+  }
+  return gray;
+}
+
+/**
+ * Simple box blur for noise reduction
+ */
+function boxBlur(
+  gray: Uint8ClampedArray,
+  width: number,
+  height: number,
+  radius: number
 ): Uint8ClampedArray {
-  const beforeData = before.data;
-  const afterData = after.data;
-  const difference = new Uint8ClampedArray(beforeData.length / 4);
+  const result = new Uint8ClampedArray(gray.length);
 
-  // Ensure same dimensions for comparison
-  const minLength = Math.min(beforeData.length, afterData.length);
-
-  for (let i = 0; i < minLength; i += 4) {
-    const rDiff = Math.abs(beforeData[i] - afterData[i]);
-    const gDiff = Math.abs(beforeData[i + 1] - afterData[i + 1]);
-    const bDiff = Math.abs(beforeData[i + 2] - afterData[i + 2]);
-
-    // Calculate intensity as average difference
-    const intensity = (rDiff + gDiff + bDiff) / 3;
-    difference[i / 4] = intensity;
+  // Horizontal pass
+  const temp = new Uint8ClampedArray(gray.length);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sum = 0;
+      let count = 0;
+      for (let dx = -radius; dx <= radius; dx++) {
+        const nx = x + dx;
+        if (nx >= 0 && nx < width) {
+          sum += gray[y * width + nx];
+          count++;
+        }
+      }
+      temp[y * width + x] = Math.round(sum / count);
+    }
   }
 
-  return difference;
+  // Vertical pass
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sum = 0;
+      let count = 0;
+      for (let dy = -radius; dy <= radius; dy++) {
+        const ny = y + dy;
+        if (ny >= 0 && ny < height) {
+          sum += temp[ny * width + x];
+          count++;
+        }
+      }
+      result[y * width + x] = Math.round(sum / count);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Compute similarity score between two grayscale images using
+ * normalized cross-correlation on a downsampled grid.
+ * Returns 0..1 (1 = identical).
+ */
+function computeSimilarity(
+  grayA: Uint8ClampedArray,
+  grayB: Uint8ClampedArray,
+  width: number,
+  height: number
+): number {
+  // Sample every 4th pixel for speed
+  const step = 4;
+  let sumAB = 0,
+    sumA2 = 0,
+    sumB2 = 0;
+  let meanA = 0,
+    meanB = 0,
+    count = 0;
+
+  for (let y = 0; y < height; y += step) {
+    for (let x = 0; x < width; x += step) {
+      const idx = y * width + x;
+      meanA += grayA[idx];
+      meanB += grayB[idx];
+      count++;
+    }
+  }
+  meanA /= count;
+  meanB /= count;
+
+  for (let y = 0; y < height; y += step) {
+    for (let x = 0; x < width; x += step) {
+      const idx = y * width + x;
+      const a = grayA[idx] - meanA;
+      const b = grayB[idx] - meanB;
+      sumAB += a * b;
+      sumA2 += a * a;
+      sumB2 += b * b;
+    }
+  }
+
+  const denom = Math.sqrt(sumA2 * sumB2);
+  if (denom === 0) return 1; // both are flat/identical
+  return Math.max(0, sumAB / denom);
+}
+
+/**
+ * Calculate per-pixel absolute difference between two grayscale images
+ */
+function calculateGrayDifference(
+  grayA: Uint8ClampedArray,
+  grayB: Uint8ClampedArray
+): Uint8ClampedArray {
+  const diff = new Uint8ClampedArray(grayA.length);
+  for (let i = 0; i < grayA.length; i++) {
+    diff[i] = Math.abs(grayA[i] - grayB[i]);
+  }
+  return diff;
 }
 
 /**
@@ -159,17 +227,16 @@ function thresholdDifference(
 }
 
 /**
- * Apply morphological noise reduction
+ * Morphological opening (erosion then dilation) to remove small noise
  */
 function morphologicalOpen(
   binary: Uint8ClampedArray,
   width: number,
   height: number,
-  radius: number = 2
+  radius: number
 ): Uint8ClampedArray {
-  // Erosion followed by dilation
   let result = binaryErode(binary, width, height, radius);
-  result = binaryDilate(result, width, height, radius);
+  result = binaryDilate(result, width, height, radius + 1); // slightly larger dilation to reconnect
   return result;
 }
 
@@ -183,21 +250,20 @@ function binaryErode(
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = y * width + x;
-      let hasZero = false;
-      for (let dy = -radius; dy <= radius; dy++) {
+      let allWhite = true;
+      outer: for (let dy = -radius; dy <= radius; dy++) {
         for (let dx = -radius; dx <= radius; dx++) {
           const ny = y + dy;
           const nx = x + dx;
           if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
             if (binary[ny * width + nx] === 0) {
-              hasZero = true;
-              break;
+              allWhite = false;
+              break outer;
             }
           }
         }
-        if (hasZero) break;
       }
-      result[idx] = hasZero ? 0 : 255;
+      result[idx] = allWhite ? 255 : 0;
     }
   }
   return result;
@@ -214,18 +280,17 @@ function binaryDilate(
     for (let x = 0; x < width; x++) {
       const idx = y * width + x;
       let hasWhite = false;
-      for (let dy = -radius; dy <= radius; dy++) {
+      outer: for (let dy = -radius; dy <= radius; dy++) {
         for (let dx = -radius; dx <= radius; dx++) {
           const ny = y + dy;
           const nx = x + dx;
           if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
             if (binary[ny * width + nx] === 255) {
               hasWhite = true;
-              break;
+              break outer;
             }
           }
         }
-        if (hasWhite) break;
       }
       result[idx] = hasWhite ? 255 : 0;
     }
@@ -234,7 +299,8 @@ function binaryDilate(
 }
 
 /**
- * Find connected components (regions) in binary image
+ * Find connected components (regions) in binary image using flood fill.
+ * Returns bounding boxes in normalized (0..1) coordinates.
  */
 function findConnectedComponents(
   binary: Uint8ClampedArray,
@@ -271,7 +337,6 @@ function floodFill(
     minY = height,
     maxY = 0;
   let pixelCount = 0;
-  let totalIntensity = 0;
 
   while (queue.length > 0) {
     const idx = queue.shift()!;
@@ -283,46 +348,95 @@ function floodFill(
     minY = Math.min(minY, y);
     maxY = Math.max(maxY, y);
     pixelCount++;
-    totalIntensity += binary[idx];
 
-    // Check 4-connectivity
-    const neighbors = [
-      idx - width,
-      idx + width,
-      idx - 1,
-      idx + 1,
-    ];
+    // 4-connectivity neighbors
+    const neighbors = [idx - width, idx + width, idx - 1, idx + 1];
 
     for (const nIdx of neighbors) {
-      if (
-        nIdx >= 0 &&
-        nIdx < binary.length &&
-        binary[nIdx] === 255 &&
-        visited[nIdx] === 0
-      ) {
+      if (nIdx < 0 || nIdx >= binary.length) continue;
+      // Prevent wrapping across rows
+      const nx = nIdx % width;
+      const ox = idx % width;
+      if (Math.abs(nx - ox) > 1 && nIdx !== idx - width && nIdx !== idx + width)
+        continue;
+      if (binary[nIdx] === 255 && visited[nIdx] === 0) {
         visited[nIdx] = 1;
         queue.push(nIdx);
       }
     }
   }
 
-  const region: ChangeRegion = {
+  // Compute intensity as the ratio of changed pixels to bounding-box area
+  const bboxW = maxX - minX + 1;
+  const bboxH = maxY - minY + 1;
+  const bboxArea = bboxW * bboxH;
+
+  return {
     x: minX / width,
     y: minY / height,
-    width: (maxX - minX + 1) / width,
-    height: (maxY - minY + 1) / height,
+    width: bboxW / width,
+    height: bboxH / height,
     area: pixelCount,
-    intensity: totalIntensity / pixelCount / 255,
+    intensity: bboxArea > 0 ? pixelCount / bboxArea : 0,
   };
+}
 
-  return region;
+/**
+ * Merge overlapping/nearby regions
+ */
+function mergeOverlappingRegions(regions: ChangeRegion[]): ChangeRegion[] {
+  if (regions.length <= 1) return regions;
+
+  const merged: ChangeRegion[] = [];
+  const used = new Set<number>();
+
+  for (let i = 0; i < regions.length; i++) {
+    if (used.has(i)) continue;
+    let r = { ...regions[i] };
+    used.add(i);
+
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let j = 0; j < regions.length; j++) {
+        if (used.has(j)) continue;
+        const s = regions[j];
+        // Check overlap or proximity (within 3% of image)
+        const margin = 0.03;
+        if (
+          r.x - margin <= s.x + s.width &&
+          r.x + r.width + margin >= s.x &&
+          r.y - margin <= s.y + s.height &&
+          r.y + r.height + margin >= s.y
+        ) {
+          // Merge bounding boxes
+          const newX = Math.min(r.x, s.x);
+          const newY = Math.min(r.y, s.y);
+          const newRight = Math.max(r.x + r.width, s.x + s.width);
+          const newBottom = Math.max(r.y + r.height, s.y + s.height);
+          r = {
+            x: newX,
+            y: newY,
+            width: newRight - newX,
+            height: newBottom - newY,
+            area: r.area + s.area,
+            intensity: Math.max(r.intensity, s.intensity),
+          };
+          used.add(j);
+          changed = true;
+        }
+      }
+    }
+    merged.push(r);
+  }
+
+  return merged;
 }
 
 /**
  * Filter and rank meaningful regions
  */
 function filterAndRankRegions(regions: ChangeRegion[]): ChangeRegion[] {
-  // Filter by minimum intensity
   let filtered = regions.filter(
     (r) => r.intensity >= ANALYSIS_CONFIG.minRegionIntensity
   );
@@ -330,125 +444,223 @@ function filterAndRankRegions(regions: ChangeRegion[]): ChangeRegion[] {
   // Sort by area (largest first)
   filtered.sort((a, b) => b.area - a.area);
 
-  // Keep top 10 regions
-  return filtered.slice(0, 10);
+  return filtered.slice(0, ANALYSIS_CONFIG.maxRegions);
 }
 
 /**
- * Convert regions to change objects
+ * Add slight padding to region bounds (as fraction of image)
+ */
+function padRegion(region: Region, padding: number = 0.02): Region {
+  return {
+    x: Math.max(0, region.x - padding),
+    y: Math.max(0, region.y - padding),
+    width: Math.min(1 - Math.max(0, region.x - padding), region.width + padding * 2),
+    height: Math.min(1 - Math.max(0, region.y - padding), region.height + padding * 2),
+  };
+}
+
+/**
+ * Convert regions to Change objects
  */
 function regionsToChanges(regions: ChangeRegion[]): Change[] {
-  return regions.map((region, idx) => ({
-    id: `change-${idx + 1}`,
-    type: "uncertain",
-    title: `Visual Change ${idx + 1}`,
-    description:
-      "A significant visual difference was detected in this region.",
-    confidence: Math.min(
-      0.95,
-      0.5 + region.intensity * 0.5
-    ),
-    confidenceLevel:
-      region.intensity > 0.6 ? "high" : region.intensity > 0.3 ? "medium" : "low",
-    region: {
+  return regions.map((region, idx) => {
+    const paddedRegion = padRegion({
       x: region.x,
       y: region.y,
       width: region.width,
       height: region.height,
-    },
-  }));
+    });
+
+    const confidenceLevel =
+      region.intensity > 0.5
+        ? "high"
+        : region.intensity > 0.25
+          ? "medium"
+          : ("low" as const);
+
+    return {
+      id: `change-${idx + 1}`,
+      type: "uncertain" as const,
+      title: `Visual Change ${idx + 1}`,
+      description:
+        "A significant visual difference was detected in this region.",
+      confidence: Math.min(0.95, 0.4 + region.intensity * 0.55),
+      confidenceLevel,
+      region: paddedRegion,
+    };
+  });
 }
 
 /**
- * Main image analysis function
+ * Generate a difference map as an ImageData for the difference view mode.
+ * The map shows differences overlaid on a dimmed version of the original.
+ */
+export function generateDifferenceMap(
+  beforeData: ImageData,
+  afterData: ImageData,
+): ImageData {
+  const width = beforeData.width;
+  const height = beforeData.height;
+  const result = new ImageData(width, height);
+
+  const grayBefore = toGrayscale(beforeData);
+  const grayAfter = toGrayscale(afterData);
+
+  // Start with a desaturated version of the before image
+  for (let i = 0; i < width * height; i++) {
+    const idx = i * 4;
+    const gray = grayBefore[i];
+    result.data[idx] = gray;
+    result.data[idx + 1] = gray;
+    result.data[idx + 2] = gray;
+    result.data[idx + 3] = 255;
+  }
+
+  // Overlay differences in red/green
+  for (let i = 0; i < width * height; i++) {
+    const diff = Math.abs(grayBefore[i] - grayAfter[i]);
+    if (diff > ANALYSIS_CONFIG.differenceThreshold) {
+      const idx = i * 4;
+      // More bright = removed (was in before), darker = added (in after)
+      if (grayBefore[i] > grayAfter[i]) {
+        // Region got darker → something may have been added/blocking
+        result.data[idx] = Math.min(255, 100 + diff);
+        result.data[idx + 1] = 50;
+        result.data[idx + 2] = 50;
+      } else {
+        // Region got brighter → something may have been removed
+        result.data[idx] = 50;
+        result.data[idx + 1] = Math.min(255, 100 + diff);
+        result.data[idx + 2] = 50;
+      }
+      result.data[idx + 3] = 255;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Represents the different stages of analysis for the progress indicator
+ */
+export type AnalysisStage =
+  | "preparing"
+  | "aligning"
+  | "detecting"
+  | "filtering"
+  | "identifying"
+  | "complete";
+
+export type ProgressCallback = (stage: AnalysisStage) => void;
+
+/**
+ * Main image analysis function.
+ * Processes the before/after images through a real computer-vision pipeline:
+ *   Normalize → Grayscale → Blur → Diff → Threshold → Morphological open → Connected components → Merge → Filter
  */
 export async function analyzeImages(
   beforeFile: File,
-  afterFile: File
+  afterFile: File,
+  onProgress?: ProgressCallback
 ): Promise<AnalyzeResponse> {
   try {
     const startTime = performance.now();
 
-    // Load and prepare images
-    let beforeData = await fileToImageData(beforeFile);
-    let afterData = await fileToImageData(afterFile);
+    // ── Stage 1: Prepare images ──
+    onProgress?.("preparing");
 
-    // Resize to analysis size if needed
-    if (
-      beforeData.width > ANALYSIS_CONFIG.maxAnalysisWidth ||
-      beforeData.height > ANALYSIS_CONFIG.maxAnalysisHeight
-    ) {
-      const scale = Math.min(
-        ANALYSIS_CONFIG.maxAnalysisWidth / beforeData.width,
-        ANALYSIS_CONFIG.maxAnalysisHeight / beforeData.height
-      );
-      beforeData = resizeImageData(
-        beforeData,
-        Math.round(beforeData.width * scale),
-        Math.round(beforeData.height * scale)
-      );
-    }
+    // First pass: get natural sizes
+    const [beforeSize, afterSize] = await Promise.all([
+      getImageSize(beforeFile),
+      getImageSize(afterFile),
+    ]);
 
-    if (
-      afterData.width > ANALYSIS_CONFIG.maxAnalysisWidth ||
-      afterData.height > ANALYSIS_CONFIG.maxAnalysisHeight
-    ) {
-      const scale = Math.min(
-        ANALYSIS_CONFIG.maxAnalysisWidth / afterData.width,
-        ANALYSIS_CONFIG.maxAnalysisHeight / afterData.height
-      );
-      afterData = resizeImageData(
-        afterData,
-        Math.round(afterData.width * scale),
-        Math.round(afterData.height * scale)
-      );
-    }
+    const analysisSize = calcAnalysisSize(
+      beforeSize.width,
+      beforeSize.height,
+      afterSize.width,
+      afterSize.height
+    );
 
-    // Try to align images
-    const alignment = estimateAlignment(beforeData, afterData);
+    // Load and resize both to the same dimensions
+    const [beforeResult, afterResult] = await Promise.all([
+      fileToImageData(beforeFile, analysisSize.width, analysisSize.height),
+      fileToImageData(afterFile, analysisSize.width, analysisSize.height),
+    ]);
 
-    // If images are very different (poorly aligned), warn user
-    if (alignment.score < 0.3) {
+    const beforeData = beforeResult.data;
+    const afterData = afterResult.data;
+    const { width, height } = analysisSize;
+
+    // Allow the UI to update
+    await sleep(60);
+
+    // ── Stage 2: Align / compare scenes ──
+    onProgress?.("aligning");
+
+    const grayBefore = toGrayscale(beforeData);
+    const grayAfter = toGrayscale(afterData);
+
+    const similarity = computeSimilarity(grayBefore, grayAfter, width, height);
+
+    await sleep(60);
+
+    // If images are very different, warn the user
+    if (similarity < 0.3) {
       return {
         summary: { totalChanges: 0 },
         changes: [],
         message:
-          "These images may not represent the same scene. Try taking photos from a similar position.",
-        metadata: { processingTime: performance.now() - startTime },
+          "These images appear to show different scenes. Try using photos taken from a similar position.",
+        metadata: {
+          processingTime: performance.now() - startTime,
+          imageWidth: width,
+          imageHeight: height,
+        },
       };
     }
 
-    // Calculate difference
-    let difference = calculateDifference(beforeData, afterData);
+    // ── Stage 3: Detect differences ──
+    onProgress?.("detecting");
 
-    // Apply threshold
-    let thresholded = thresholdDifference(
+    // Apply blur to reduce noise / JPEG artifacts
+    const blurredBefore = boxBlur(grayBefore, width, height, ANALYSIS_CONFIG.blurRadius);
+    const blurredAfter = boxBlur(grayAfter, width, height, ANALYSIS_CONFIG.blurRadius);
+
+    const difference = calculateGrayDifference(blurredBefore, blurredAfter);
+    const thresholded = thresholdDifference(
       difference,
       ANALYSIS_CONFIG.differenceThreshold
     );
 
-    // Morphological filtering to reduce noise
-    thresholded = morphologicalOpen(
+    await sleep(60);
+
+    // ── Stage 4: Filter noise ──
+    onProgress?.("filtering");
+
+    const cleaned = morphologicalOpen(
       thresholded,
-      beforeData.width,
-      beforeData.height,
-      2
+      width,
+      height,
+      ANALYSIS_CONFIG.morphRadius
     );
 
-    // Find connected components
-    const regions = findConnectedComponents(
-      thresholded,
-      beforeData.width,
-      beforeData.height
-    );
+    await sleep(60);
 
-    // Filter and rank
+    // ── Stage 5: Identify regions ──
+    onProgress?.("identifying");
+
+    let regions = findConnectedComponents(cleaned, width, height);
+    regions = mergeOverlappingRegions(regions);
     const meaningfulRegions = filterAndRankRegions(regions);
 
-    // Convert to changes
     const changes = regionsToChanges(meaningfulRegions);
 
-    // If no changes found
+    await sleep(60);
+
+    // ── Stage 6: Complete ──
+    onProgress?.("complete");
+
     if (changes.length === 0) {
       return {
         summary: { totalChanges: 0 },
@@ -456,8 +668,8 @@ export async function analyzeImages(
         message: "No meaningful changes detected.",
         metadata: {
           processingTime: performance.now() - startTime,
-          imageWidth: beforeData.width,
-          imageHeight: beforeData.height,
+          imageWidth: width,
+          imageHeight: height,
         },
       };
     }
@@ -467,8 +679,8 @@ export async function analyzeImages(
       changes,
       metadata: {
         processingTime: performance.now() - startTime,
-        imageWidth: beforeData.width,
-        imageHeight: beforeData.height,
+        imageWidth: width,
+        imageHeight: height,
       },
     };
   } catch (error) {
@@ -480,4 +692,29 @@ export async function analyzeImages(
       metadata: {},
     };
   }
+}
+
+/**
+ * Get natural size of an image file without rendering at full size
+ */
+function getImageSize(
+  file: File
+): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load image"));
+    };
+    img.src = url;
+  });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
