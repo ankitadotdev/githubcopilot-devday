@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowRight, Image as ImageIcon, Sparkles, ScanEye, Zap, GripVertical, BrainCircuit, Cpu, Layers, CheckSquare, ShieldCheck, Globe, Activity, Github } from "lucide-react";
+import { ArrowRight, Image as ImageIcon, Sparkles, ScanEye, Zap, GripVertical, BrainCircuit, Cpu, Layers, CheckSquare, ShieldCheck, Globe, Activity, Code2 } from "lucide-react";
 
 interface LandingPageProps {
   onStart: () => void;
@@ -313,7 +313,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
             <a href="#" className="hover:text-white transition">Privacy Policy</a>
             <a href="#" className="hover:text-white transition">Terms of Service</a>
             <a href="https://github.com/ankitadotdev/githubcopilot-devday" target="_blank" rel="noopener noreferrer" className="hover:text-white transition flex items-center gap-2">
-              <Github size={16} />
+              <Code2 size={16} />
               Open Source
             </a>
           </div>
