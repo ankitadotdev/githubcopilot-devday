@@ -1,5 +1,5 @@
 import React from "react";
-import { Upload, X } from "lucide-react";
+import { Upload, X, CheckCircle } from "lucide-react";
 import { validateImageFile, revokeObjectURL } from "../../utils/image";
 
 interface ImagePreviewProps {
@@ -67,30 +67,35 @@ export function ImagePreview({
 
   return (
     <div className="flex-1">
-      <h3 className="text-lg font-semibold mb-4 text-gray-900">{label}</h3>
+      <h3 className="text-xl font-bold mb-4 gradient-heading">{label}</h3>
 
       {preview ? (
-        <div className="relative bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+        <div className="relative card-shadow bg-white rounded-2xl border border-gray-200 overflow-hidden group">
           <img
             src={preview}
             alt={label}
             className="w-full h-auto max-h-96 object-contain"
           />
-          <button
-            onClick={handleRemove}
-            disabled={disabled}
-            className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-full p-2 transition"
-            aria-label={`Remove ${label}`}
-          >
-            <X size={20} />
-          </button>
-          <button
-            onClick={() => document.getElementById(`${label}-input`)?.click()}
-            disabled={disabled}
-            className="absolute bottom-2 right-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white px-4 py-2 rounded text-sm transition"
-          >
-            Replace
-          </button>
+          <div className="absolute top-3 right-3 bg-green-500 text-white rounded-full p-2 shadow-lg">
+            <CheckCircle size={20} />
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/30 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-2 justify-end">
+            <button
+              onClick={() => document.getElementById(`${label}-input`)?.click()}
+              disabled={disabled}
+              className="button-secondary text-sm"
+            >
+              Replace
+            </button>
+            <button
+              onClick={handleRemove}
+              disabled={disabled}
+              className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-lg p-2 transition font-semibold"
+              aria-label={`Remove ${label}`}
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
       ) : (
         <div
@@ -98,15 +103,20 @@ export function ImagePreview({
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition cursor-pointer ${
+          className={`border-2 border-dashed rounded-2xl p-12 text-center transition cursor-pointer ${
             dragActive
-              ? "border-blue-500 bg-blue-50"
-              : "border-gray-300 bg-gray-50 hover:border-gray-400"
+              ? "border-blue-500 bg-blue-50 scale-105"
+              : "border-blue-300 bg-white hover:border-blue-400 hover:bg-blue-50"
           } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
         >
-          <Upload className="mx-auto mb-3 text-gray-400" size={32} />
-          <p className="text-gray-600 mb-2">Drop image here or click to browse</p>
-          <p className="text-xs text-gray-500">JPG, PNG, WEBP up to 10MB</p>
+          <div className="mb-4">
+            <Upload className="mx-auto mb-3 text-blue-500" size={48} strokeWidth={1.5} />
+          </div>
+          <p className="text-gray-700 mb-2 font-semibold text-lg">
+            Drop your {label.toLowerCase()} image here
+          </p>
+          <p className="text-sm text-gray-500">or click to browse</p>
+          <p className="text-xs text-gray-400 mt-3">JPG, PNG, WEBP up to 10MB</p>
 
           <input
             id={`${label}-input`}
