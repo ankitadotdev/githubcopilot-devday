@@ -89,63 +89,64 @@ function App() {
   const canCompare = beforeFile && afterFile && !isAnalyzing;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+    <div className="min-h-screen flex flex-col bg-white">
       {/* Header */}
-      <header className="border-b border-white/20 py-8 md:py-12 bg-white/70 backdrop-blur-md shadow-sm">
-        <div className="max-w-7xl mx-auto px-6">
-          <h1 className="text-5xl md:text-6xl font-black gradient-heading tracking-tight">
+      <header className="border-b subtle-border bg-white">
+        <div className="max-w-6xl mx-auto px-6 py-6 md:py-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
             WHAT CHANGED?
           </h1>
-          <p className="text-lg text-gray-600 mt-3 font-medium">
-            Advanced image comparison using computer vision
+          <p className="text-gray-600 mt-2 text-sm md:text-base">
+            Compare images and see what actually changed
           </p>
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-12">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8 md:py-12">
         {viewMode === "upload" ? (
           // Upload View
-          <div className="space-y-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-              <ImagePreview
-                label="BEFORE"
-                file={beforeFile}
-                preview={beforePreview}
-                onFileChange={handleBeforeFileChange}
-                onDrop={handleBeforeFileChange}
-                disabled={isAnalyzing}
-              />
-              <ImagePreview
-                label="AFTER"
-                file={afterFile}
-                preview={afterPreview}
-                onFileChange={handleAfterFileChange}
-                onDrop={handleAfterFileChange}
-                disabled={isAnalyzing}
-              />
+          <div className="space-y-8">
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-6">
+                Upload two images to compare
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <ImagePreview
+                  label="BEFORE"
+                  file={beforeFile}
+                  preview={beforePreview}
+                  onFileChange={handleBeforeFileChange}
+                  onDrop={handleBeforeFileChange}
+                  disabled={isAnalyzing}
+                />
+                <ImagePreview
+                  label="AFTER"
+                  file={afterFile}
+                  preview={afterPreview}
+                  onFileChange={handleAfterFileChange}
+                  onDrop={handleAfterFileChange}
+                  disabled={isAnalyzing}
+                />
+              </div>
             </div>
 
             {isAnalyzing && <AnalysisProgress isAnalyzing={isAnalyzing} />}
 
-            <div className="flex justify-center pt-6">
+            <div className="flex justify-center pt-4">
               <button
                 onClick={handleCompare}
                 disabled={!canCompare}
-                className={`px-10 py-4 font-bold rounded-xl transition text-lg transform ${
-                  canCompare
-                    ? "button-primary hover:scale-105 shadow-lg"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
+                className="button-primary"
               >
                 {beforeFile && afterFile
-                  ? "🔍 ANALYZE & COMPARE"
-                  : "Add both images"}
+                  ? "Analyze Images"
+                  : "Add both images to continue"}
               </button>
             </div>
           </div>
         ) : (
           // Comparison View
-          <div className="space-y-10">
+          <div className="space-y-8">
             {/* Summary */}
             {analysisResult && (
               <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl border border-white/30 card-shadow">

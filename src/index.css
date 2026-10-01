@@ -12,8 +12,8 @@ html {
 
 body {
   margin: 0;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  color: #374151;
+  background: #f8f8f8;
+  color: #222;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -27,82 +27,148 @@ body {
   flex-direction: column;
 }
 
-/* Custom utility classes */
-.gradient-heading {
-  background: linear-gradient(to right, #2563eb, #7c3aed);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.card-shadow {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.2s;
-}
-
-.card-shadow:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-.glass-effect {
-  background-color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(1rem);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
+/* Professional, minimal design */
 .button-primary {
-  background: linear-gradient(to right, #2563eb, #1d4ed8);
+  background-color: #1a1a1a;
   color: white;
   font-weight: 600;
-  padding: 0.5rem 1.5rem;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  padding: 0.75rem 2rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
   border: none;
   cursor: pointer;
+  font-size: 0.95rem;
 }
 
 .button-primary:hover:not(:disabled) {
-  background: linear-gradient(to right, #1d4ed8, #1e40af);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  background-color: #000;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .button-primary:disabled {
-  opacity: 0.5;
+  background-color: #ccc;
   cursor: not-allowed;
 }
 
 .button-secondary {
-  background-color: #f3f4f6;
-  color: #111827;
+  background-color: #eee;
+  color: #222;
   font-weight: 600;
-  padding: 0.5rem 1.5rem;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
-  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  border: 1px solid #ddd;
   cursor: pointer;
+  font-size: 0.95rem;
 }
 
 .button-secondary:hover:not(:disabled) {
-  background-color: #e5e7eb;
+  background-color: #e0e0e0;
+  border-color: #999;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .button-secondary:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
-.input-field {
-  width: 100%;
+.button-sm {
+  background-color: #1a1a1a;
+  color: white;
+  font-weight: 500;
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid #d1d5db;
-  transition: all 0.2s;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
 }
 
-.input-field:focus {
-  outline: none;
-  border-color: #3b82f6;
-  ring: 2px solid #dbeafe;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.button-sm:hover:not(:disabled) {
+  background-color: #000;
+}
+
+.button-danger {
+  background-color: #dc2626;
+  color: white;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.button-danger:hover:not(:disabled) {
+  background-color: #b91c1c;
+}
+
+.subtle-border {
+  border: 1px solid #ddd;
+}
+
+.subtle-shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.subtle-shadow:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transition: box-shadow 0.2s ease;
+}
+
+.upload-area-border {
+  border: 2px dashed #999;
+  transition: all 0.2s ease;
+}
+
+.upload-area-border.drag-active {
+  border-color: #1a1a1a;
+  background-color: #fafafa;
+}
+
+.image-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.semantic-color-removed {
+  color: #dc2626;
+}
+
+.semantic-color-added {
+  color: #16a34a;
+}
+
+.semantic-color-moved {
+  color: #d97706;
+}
+
+.semantic-color-modified {
+  color: #2563eb;
+}
+
+.semantic-bg-removed {
+  background-color: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.semantic-bg-added {
+  background-color: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.2);
+}
+
+.semantic-bg-moved {
+  background-color: rgba(217, 119, 6, 0.08);
+  border-color: rgba(217, 119, 6, 0.2);
+}
+
+.semantic-bg-modified {
+  background-color: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.2);
 }
