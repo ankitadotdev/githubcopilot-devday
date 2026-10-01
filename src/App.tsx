@@ -223,11 +223,12 @@ function App() {
                 <h3 className="text-lg font-semibold text-gray-900">
                   Detected Changes
                 </h3>
-                <div className="grid gap-4">
-                  {analysisResult.changes.map((change) => (
+                 <div className="grid gap-3">
+                  {analysisResult.changes.map((change, index) => (
                     <ChangeCard
                       key={change.id}
                       change={change}
+                      index={index}
                       isSelected={selectedChangeId === change.id}
                       onClick={() => setSelectedChangeId(change.id)}
                       onViewEvidence={() => {

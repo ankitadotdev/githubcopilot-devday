@@ -3,10 +3,10 @@ import React from "react";
 const stages = [
   "Preparing images",
   "Aligning scenes",
-  "Understanding objects",
-  "Comparing regions",
-  "Filtering visual noise",
-  "Preparing change report",
+  "Finding visual differences",
+  "Filtering noise",
+  "Identifying changed regions",
+  "Preparing report",
 ];
 
 interface AnalysisProgressProps {
