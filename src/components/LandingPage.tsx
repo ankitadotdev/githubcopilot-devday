@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowRight, Image as ImageIcon, Sparkles, ScanEye, Zap, GripVertical, BrainCircuit, Cpu, Layers } from "lucide-react";
+import { ArrowRight, Image as ImageIcon, Sparkles, ScanEye, Zap, GripVertical, BrainCircuit, Cpu, Layers, CheckSquare, ShieldCheck, Globe, Activity, Github } from "lucide-react";
 
 interface LandingPageProps {
   onStart: () => void;
@@ -213,6 +213,41 @@ export function LandingPage({ onStart }: LandingPageProps) {
           </div>
         </div>
 
+        {/* Use Cases Section */}
+        <div className="opacity-0 animate-fade-in-up w-full max-w-6xl mt-32 mb-10 text-left" style={{ animationDelay: "0.65s" }}>
+          <div className="flex flex-col items-center text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-4">
+              Built for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Scale and Precision</span>
+            </h2>
+            <p className="text-gray-500 max-w-2xl text-lg">
+              From software testing to medical research, WHAT CHANGED? empowers teams to find critical visual differences before they become problems.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 card-shadow hover:-translate-y-1 transition-transform">
+              <CheckSquare size={24} className="text-blue-500 mb-4" />
+              <h3 className="font-bold text-gray-900 mb-2">QA & Visual Regression</h3>
+              <p className="text-sm text-gray-500">Automate layout testing. Spot tiny UI shifts instantly.</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 card-shadow hover:-translate-y-1 transition-transform">
+              <ShieldCheck size={24} className="text-blue-500 mb-4" />
+              <h3 className="font-bold text-gray-900 mb-2">Security & Audits</h3>
+              <p className="text-sm text-gray-500">Detect tampering in documents or physical surveillance.</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 card-shadow hover:-translate-y-1 transition-transform">
+              <Globe size={24} className="text-blue-500 mb-4" />
+              <h3 className="font-bold text-gray-900 mb-2">Satellite Imagery</h3>
+              <p className="text-sm text-gray-500">Monitor environmental or structural changes over time.</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 card-shadow hover:-translate-y-1 transition-transform">
+              <Activity size={24} className="text-blue-500 mb-4" />
+              <h3 className="font-bold text-gray-900 mb-2">Medical Imaging</h3>
+              <p className="text-sm text-gray-500">Track anomaly progression in high-res diagnostic scans.</p>
+            </div>
+          </div>
+        </div>
+
         {/* Future Vision / ML Scope */}
         <div className="opacity-0 animate-fade-in-up w-full max-w-6xl mt-32 mb-10 text-left" style={{ animationDelay: "0.7s" }}>
           <div className="flex flex-col items-center text-center mb-16">
@@ -266,6 +301,24 @@ export function LandingPage({ onStart }: LandingPageProps) {
           </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-gray-400 py-12 px-5">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-2 text-white">
+            <ScanEye size={20} />
+            <span className="font-bold tracking-tight">WHAT CHANGED?</span>
+          </div>
+          <div className="flex gap-8 text-sm">
+            <a href="#" className="hover:text-white transition">Privacy Policy</a>
+            <a href="#" className="hover:text-white transition">Terms of Service</a>
+            <a href="https://github.com/ankitadotdev/githubcopilot-devday" target="_blank" rel="noopener noreferrer" className="hover:text-white transition flex items-center gap-2">
+              <Github size={16} />
+              Open Source
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
