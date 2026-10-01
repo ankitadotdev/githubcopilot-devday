@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ArrowRight, Image as ImageIcon, Sparkles, ScanEye, Zap, GripVertical } from "lucide-react";
 
 interface LandingPageProps {
@@ -14,7 +14,7 @@ function HeroInteractiveMockup() {
   useEffect(() => {
     if (isHovered) return;
     const interval = setInterval(() => {
-      setSliderPosition((prev) => {
+      setSliderPosition(() => {
         const time = Date.now() / 1500; // Speed
         return 50 + Math.sin(time) * 30; // Oscillate between 20% and 80%
       });
